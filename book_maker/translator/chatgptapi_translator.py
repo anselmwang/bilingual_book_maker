@@ -46,6 +46,7 @@ class ChatGPTAPI(Base):
         super().__init__(key, language)
         self.key_len = len(key.split(","))
         self.openai_client = OpenAI(api_key=key, base_url=api_base)
+        self.api_base = api_base
 
         self.prompt_template = (
             prompt_template
@@ -101,7 +102,12 @@ class ChatGPTAPI(Base):
             pass
 
         # TODO work well or exception finish by length limit
-        t_text = completion.choices[0].message.content.encode("utf8").decode() or ""
+        try:
+            t_text = completion.choices[0].message.content.encode("utf8").decode() or ""
+        except Exception as e:
+            print(e)
+            print(completion)
+            raise
 
         return t_text
 
@@ -130,7 +136,8 @@ class ChatGPTAPI(Base):
                 attempt_count += 1
                 if attempt_count == max_attempts:
                     print(f"Get {attempt_count} consecutive exceptions")
-                    raise
+                    t_text = "无法翻译"
+                    break
 
         # todo: Determine whether to print according to the cli option
         if needprint:
@@ -293,6 +300,7 @@ class ChatGPTAPI(Base):
 
     def set_deployment_id(self, deployment_id):
         self.deployment_id = deployment_id
+
         self.openai_client = AzureOpenAI(
             api_key=next(self.keys),
             azure_endpoint=self.api_base,
